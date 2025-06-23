@@ -1,0 +1,28 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Parker Game</title>
+  <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+  <div id="gameContainer">
+    <h1>Minecraft Train Runner</h1>
+    <div id="score">Score: <span id="scoreValue">0</span></div>
+    <div id="level">Level: <span id="levelValue">1</span></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="controls">
+      <p>Use A/D or Arrow Keys to move left/right, W/Space to jump</p>
+      <p>Keep up with the moving train! Collect emeralds for bonus points!</p>
+      <p>Don't fall behind or you'll lose!</p>
+      <button id="restartBtn">Restart Game</button>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+
+</html>
