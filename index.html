@@ -1,22 +1,24 @@
-
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
   <title>Parker Game</title>
   <link href="style.css" rel="stylesheet" type="text/css" />
 </head>
-
 <body>
   <div id="gameContainer">
     <h1>Minecraft Train Runner</h1>
     <div id="score">Score: <span id="scoreValue">0</span></div>
     <div id="level">Level: <span id="levelValue">1</span></div>
+    <div id="highScore">High Score: <span id="highScoreValue">0</span></div>
+    <div id="jumps">
+      Jumps Used: <span id="jumpUsedValue">0</span> / <span id="jumpMaxValue">2</span> 
+      (Left: <span id="jumpLeftValue">2</span>)
+    </div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="controls">
-      <p>Use A/D or Arrow Keys to move left/right, W/Space to jump</p>
+      <p>Use Arrow Keys (Left/Right) to move, Up/Space to jump (double jump allowed)</p>
       <p>Keep up with the moving train! Collect emeralds for bonus points!</p>
       <p>Don't fall behind or you'll lose!</p>
       <button id="restartBtn">Restart Game</button>
@@ -24,5 +26,4 @@
   </div>
   <script src="script.js"></script>
 </body>
-
 </html>
