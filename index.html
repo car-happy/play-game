@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Parker Game</title>
   <link href="style.css" rel="stylesheet" type="text/css" />
 </head>
@@ -13,15 +13,20 @@
     <div id="level">Level: <span id="levelValue">1</span></div>
     <div id="highScore">High Score: <span id="highScoreValue">0</span></div>
     <div id="jumps">
-      Jumps Used: <span id="jumpUsedValue">0</span> / <span id="jumpMaxValue">2</span> 
+      Jumps Used: <span id="jumpUsedValue">0</span> / <span id="jumpMaxValue">2</span>
       (Left: <span id="jumpLeftValue">2</span>)
     </div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="controls">
-      <p>Use Arrow Keys (Left/Right) to move, Up/Space to jump (double jump allowed)</p>
+      <p>Use Arrow Keys (Left/Right) or buttons below to move, Up/Space or Jump button to jump (double jump allowed)</p>
       <p>Keep up with the moving train! Collect emeralds for bonus points!</p>
       <p>Don't fall behind or you'll lose!</p>
       <button id="restartBtn">Restart Game</button>
+    </div>
+    <div id="touchControls">
+      <button id="btnLeft">◀️</button>
+      <button id="btnJump">⏫</button>
+      <button id="btnRight">▶️</button>
     </div>
   </div>
   <script src="script.js"></script>
