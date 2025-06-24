@@ -62,7 +62,6 @@ h1 {
   max-height: 60vw;
   box-sizing: border-box;
   touch-action: none;
-  /* Prevents canvas from being white/transparent on mobile */
 }
 
 #controls {
@@ -115,7 +114,6 @@ h1 {
   background: #c0392b;
 }
 
-/* Responsive design for tablets and phones */
 @media (max-width: 900px) {
   #gameCanvas {
     width: 100vw !important;
@@ -155,7 +153,6 @@ h1 {
   }
 }
 
-/* Hide scrollbars on mobile for immersive experience */
 ::-webkit-scrollbar {
   width: 8px;
   background: #34495e;
