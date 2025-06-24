@@ -5,14 +5,16 @@ function resizeCanvas(canvas) {
   let width = window.innerWidth - 40;
   // Detect mobile device for smarter height calculation
   let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  let height = window.innerHeight - (isMobile ? 120 : 260);
+  // Make the canvas taller by subtracting less (was 120/260, now 40/180)
+  let height = window.innerHeight - (isMobile ? 40 : 180);
   if (width / height > ratio) {
     width = height * ratio;
   } else {
     height = width / ratio;
   }
+  // Also allow a taller max height, e.g. 900px
   width = Math.max(240, Math.min(800, width));
-  height = Math.max(180, Math.min(600, height));
+  height = Math.max(220, Math.min(900, height));
   canvas.width = width;
   canvas.height = height;
   canvas.style.width = width + "px";
@@ -197,7 +199,8 @@ class ParkerGame {
     this.cameraX = 0;
     this.lavaLevel = this.canvas.height - this.lavaMargin;
     this.generateMorePlatforms();
-    this.player.y = this.lavaLevel - 200;
+    // Player starts closer to the bottom so more of the level is visible above on mobile
+    this.player.y = this.lavaLevel - 120;
     this.player.x = 100;
     this.player.speedX = 0;
     this.player.speedY = 0;
@@ -221,7 +224,7 @@ class ParkerGame {
       if (Math.random() < 0.8) {
         const blockData = blockTypes[Math.floor(Math.random() * blockTypes.length)];
         // Place platforms higher above the lava (lower on screen)
-        const platformHeight = 80 + Math.random() * Math.min(120, maxJumpHeight - 50);
+        const platformHeight = 60 + Math.random() * Math.min(90, maxJumpHeight - 50);
         const platformWidth = 64 + Math.floor(Math.random() * 3) * 64;
         const horizontalGap = 32 + Math.random() * Math.min(80, maxJumpDistance - 40);
         this.platforms.push({
