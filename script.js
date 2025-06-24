@@ -1,17 +1,16 @@
 let gameInstance = null;
 
 function resizeCanvas(canvas) {
-  const ratio = 4/3;
+  const ratio = 4 / 3;
   let width = window.innerWidth - 40;
   let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  // Allow a much taller canvas on mobile! Only subtract a little (e.g. 10px).
+  // Make the game as tall as possible on mobile
   let height = window.innerHeight - (isMobile ? 10 : 160);
   if (width / height > ratio) {
     width = height * ratio;
   } else {
     height = width / ratio;
   }
-  // Allow mobile to go up to 1000px tall.
   width = Math.max(240, Math.min(800, width));
   height = Math.max(220, Math.min(isMobile ? 1000 : 900, height));
   canvas.width = width;
@@ -31,8 +30,6 @@ class ParkerGame {
     this.jumpMaxElement = document.getElementById('jumpMaxValue');
     this.jumpLeftElement = document.getElementById('jumpLeftValue');
     this.restartBtn = document.getElementById('restartBtn');
-
-    // Touch controls
     this.btnLeft = document.getElementById('btnLeft');
     this.btnRight = document.getElementById('btnRight');
     this.btnJump = document.getElementById('btnJump');
@@ -67,12 +64,10 @@ class ParkerGame {
     this.nextPlatformX = 0;
     this.keys = {};
 
-    // Game Over Banner Animation State
     this.gameOverBannerY = -100;
     this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     this.gameOverBannerAnimating = false;
 
-    // Lava and platform margin: smaller margin on mobile for more game area
     let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     this.lavaMargin = isMobile ? 40 : 80;
     this.lavaLevel = this.canvas.height - this.lavaMargin;
@@ -125,11 +120,9 @@ class ParkerGame {
       if (gameInstance) gameInstance.restart();
     });
 
-    // Touch events
     const preventDefault = e => e.preventDefault();
     this.touchActive = { left: false, right: false, jump: false };
 
-    // Touch Left
     this.btnLeft.addEventListener('touchstart', e => {
       this.touchActive.left = true;
       this.keys['ArrowLeft'] = true;
@@ -149,7 +142,6 @@ class ParkerGame {
       this.keys['ArrowLeft'] = false;
     });
 
-    // Touch Right
     this.btnRight.addEventListener('touchstart', e => {
       this.touchActive.right = true;
       this.keys['ArrowRight'] = true;
@@ -169,7 +161,6 @@ class ParkerGame {
       this.keys['ArrowRight'] = false;
     });
 
-    // Touch Jump
     this.btnJump.addEventListener('touchstart', e => {
       this.touchActive.jump = true;
       this.keys['ArrowUp'] = true;
@@ -201,7 +192,6 @@ class ParkerGame {
     this.cameraX = 0;
     this.lavaLevel = this.canvas.height - this.lavaMargin;
     this.generateMorePlatforms();
-    // Place player lower (closer to lava)
     this.player.y = this.lavaLevel - 80;
     this.player.x = 100;
     this.player.speedX = 0;
@@ -225,7 +215,6 @@ class ParkerGame {
     while (this.nextPlatformX < this.cameraX + this.canvas.width + 1000) {
       if (Math.random() < 0.8) {
         const blockData = blockTypes[Math.floor(Math.random() * blockTypes.length)];
-        // Place platforms even lower (closer to lava)
         const platformHeight = 40 + Math.random() * Math.min(70, maxJumpHeight - 50);
         const platformWidth = 64 + Math.floor(Math.random() * 3) * 64;
         const horizontalGap = 32 + Math.random() * Math.min(80, maxJumpDistance - 40);
@@ -261,7 +250,6 @@ class ParkerGame {
     this.worldSpeed += this.worldSpeedIncrease;
     this.generateMorePlatforms();
 
-    // Movement
     if (this.keys['ArrowLeft']) {
       this.player.speedX = Math.max(this.player.speedX - 1.2, -this.player.maxSpeed);
     }
@@ -269,7 +257,6 @@ class ParkerGame {
       this.player.speedX = Math.min(this.player.speedX + 1.2, this.player.maxSpeed);
     }
 
-    // Double Jump logic
     if ((this.keys['ArrowUp'] || this.keys[' ']) && this.jumpUsed < this.jumpMax && !this.jumpLock) {
       this.player.speedY = -this.player.jumpPower;
       this.player.onGround = false;
@@ -277,7 +264,6 @@ class ParkerGame {
       this.updateJumpCounter();
       this.jumpLock = true;
     }
-    // Prevent holding down jump to use all jumps: only allow once per key press
     if (!(this.keys['ArrowUp'] || this.keys[' '])) {
       this.jumpLock = false;
     }
@@ -287,7 +273,6 @@ class ParkerGame {
     this.player.x += this.player.speedX;
     this.player.y += this.player.speedY;
 
-    // Clamp player X
     if (this.player.x < 50) {
       this.player.x = 50;
       this.player.speedX = 0;
@@ -297,7 +282,6 @@ class ParkerGame {
       this.player.speedX = 0;
     }
 
-    // Platform collision + jump reset
     this.player.onGround = false;
     const playerWorldX = this.player.x + this.cameraX;
     for (let platform of this.platforms) {
@@ -311,21 +295,16 @@ class ParkerGame {
         height: this.player.height
       };
       if (this.checkCollision(playerRect, platform)) {
-        // Landing on top of platform
         if (this.player.speedY > 0 && this.player.y < platform.y) {
           this.player.y = platform.y - this.player.height;
           this.player.speedY = 0;
           this.player.onGround = true;
-          this.jumpUsed = 0; // Reset jumps when landing
+          this.jumpUsed = 0;
           this.updateJumpCounter();
-        }
-        // Hitting platform from below
-        else if (this.player.speedY < 0 && this.player.y + this.player.height > platform.y + platform.height) {
+        } else if (this.player.speedY < 0 && this.player.y + this.player.height > platform.y + platform.height) {
           this.player.y = platform.y + platform.height;
           this.player.speedY = 0;
-        }
-        // Hitting platform from side
-        else if (this.player.speedX > 0 && playerWorldX < platform.x) {
+        } else if (this.player.speedX > 0 && playerWorldX < platform.x) {
           this.player.x = platform.x - this.player.width - this.cameraX;
           this.player.speedX = 0;
         } else if (this.player.speedX < 0 && playerWorldX + this.player.width > platform.x + platform.width) {
@@ -335,7 +314,6 @@ class ParkerGame {
       }
     }
 
-    // Collect goals
     for (let goal of this.goals) {
       if (!goal.collected) {
         const playerRect = {
@@ -356,7 +334,6 @@ class ParkerGame {
     this.platforms = this.platforms.filter(p => p.x > this.cameraX - 200);
     this.goals = this.goals.filter(g => g.x > this.cameraX - 200);
 
-    // Death
     if (this.player.y + this.player.height >= this.lavaLevel ||
       this.player.y > this.canvas.height ||
       this.player.x + this.cameraX < this.cameraX - 100) {
@@ -373,7 +350,6 @@ class ParkerGame {
       localStorage.setItem('parkerHighScore', String(this.highScore));
       this.updateHighScore();
     }
-    // Start banner animation
     this.gameOverBannerY = -100;
     this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     this.gameOverBannerAnimating = true;
@@ -390,10 +366,8 @@ class ParkerGame {
     this.ctx.fillStyle = '#2c1810';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Lava
     this.drawLava();
 
-    // Platforms
     for (let platform of this.platforms) {
       const screenX = platform.x - this.cameraX;
       if (screenX + platform.width >= -100 && screenX <= this.canvas.width + 100) {
@@ -401,7 +375,6 @@ class ParkerGame {
       }
     }
 
-    // Goals
     for (let goal of this.goals) {
       const screenX = goal.x - this.cameraX;
       if (screenX + goal.width >= -50 && screenX <= this.canvas.width + 50) {
@@ -417,31 +390,25 @@ class ParkerGame {
       }
     }
 
-    // Player
     this.drawMinecraftPlayer();
 
-    // Speed indicator
     this.ctx.fillStyle = 'white';
     this.ctx.font = '16px Arial';
     this.ctx.fillText(`Speed: ${Math.floor(this.worldSpeed)}`, 10, 30);
 
-    // Game Over Banner Animation
     if (!this.gameRunning && this.gameOverBannerAnimating) {
-      // Fade background
       this.ctx.save();
       this.ctx.globalAlpha = 0.4;
       this.ctx.fillStyle = "#000";
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       this.ctx.restore();
 
-      // Animate banner falling
       if (this.gameOverBannerY < this.gameOverBannerTargetY) {
         this.gameOverBannerY += 20;
         if (this.gameOverBannerY > this.gameOverBannerTargetY) {
           this.gameOverBannerY = this.gameOverBannerTargetY;
         }
       }
-      // Draw banner
       this.ctx.save();
       this.ctx.globalAlpha = 0.96;
       this.ctx.fillStyle = "#222";
@@ -692,7 +659,6 @@ class ParkerGame {
     this.updateLevel();
     this.generateLevel();
     this.updateJumpCounter();
-    // Reset game over banner state
     this.gameOverBannerY = -100;
     this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     this.gameOverBannerAnimating = false;
