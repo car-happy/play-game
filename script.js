@@ -4,7 +4,6 @@ function resizeCanvas(canvas) {
   const ratio = 4 / 3;
   let width = window.innerWidth - 40;
   let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  // Make the game as tall as possible on mobile
   let height = window.innerHeight - (isMobile ? 10 : 160);
   if (width / height > ratio) {
     width = height * ratio;
@@ -33,6 +32,7 @@ class ParkerGame {
     this.btnLeft = document.getElementById('btnLeft');
     this.btnRight = document.getElementById('btnRight');
     this.btnJump = document.getElementById('btnJump');
+    this.emeraldsElement = document.getElementById('emeraldsValue');
 
     this.score = 0;
     this.level = 1;
@@ -40,6 +40,7 @@ class ParkerGame {
     this.gameRunning = true;
     this.jumpMax = 2;
     this.jumpUsed = 0;
+    this.emeraldsCollected = 0;
 
     this.player = {
       x: 100,
@@ -77,6 +78,7 @@ class ParkerGame {
     this.updateLevel();
     this.updateHighScore();
     this.updateJumpCounter();
+    this.updateEmeraldCounter();
 
     resizeCanvas(this.canvas);
     window.addEventListener('resize', () => {
@@ -197,7 +199,9 @@ class ParkerGame {
     this.player.speedX = 0;
     this.player.speedY = 0;
     this.jumpUsed = 0;
+    this.emeraldsCollected = 0;
     this.updateJumpCounter();
+    this.updateEmeraldCounter();
   }
 
   generateMorePlatforms() {
@@ -326,7 +330,9 @@ class ParkerGame {
           goal.collected = true;
           goal.color = '#f39c12';
           this.score += Math.floor(this.worldSpeed * 50);
+          this.emeraldsCollected++;
           this.updateScore();
+          this.updateEmeraldCounter();
         }
       }
     }
@@ -633,6 +639,12 @@ class ParkerGame {
     this.jumpLeftElement.textContent = this.jumpMax - this.jumpUsed;
   }
 
+  updateEmeraldCounter() {
+    if (this.emeraldsElement) {
+      this.emeraldsElement.textContent = this.emeraldsCollected;
+    }
+  }
+
   nextLevel() {
     this.level++;
     this.worldSpeed += 1;
@@ -659,6 +671,7 @@ class ParkerGame {
     this.updateLevel();
     this.generateLevel();
     this.updateJumpCounter();
+    this.updateEmeraldCounter();
     this.gameOverBannerY = -100;
     this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     this.gameOverBannerAnimating = false;
