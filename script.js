@@ -1,4 +1,4 @@
-let gameInstance = null; // Always keep only one instance
+let gameInstance = null;
 
 class ParkerGame {
   constructor() {
@@ -6,11 +6,20 @@ class ParkerGame {
     this.ctx = this.canvas.getContext('2d');
     this.scoreElement = document.getElementById('scoreValue');
     this.levelElement = document.getElementById('levelValue');
+    this.highScoreElement = document.getElementById('highScoreValue');
+    this.jumpUsedElement = document.getElementById('jumpUsedValue');
+    this.jumpMaxElement = document.getElementById('jumpMaxValue');
+    this.jumpLeftElement = document.getElementById('jumpLeftValue');
     this.restartBtn = document.getElementById('restartBtn');
 
     this.score = 0;
     this.level = 1;
+    this.highScore = Number(localStorage.getItem('parkerHighScore')) || 0;
+
     this.gameRunning = true;
+
+    this.jumpMax = 2;
+    this.jumpUsed = 0;
 
     this.player = {
       x: 100,
@@ -38,10 +47,11 @@ class ParkerGame {
     this.generateLevel();
     this.updateScore();
     this.updateLevel();
+    this.updateHighScore();
+    this.updateJumpCounter();
   }
 
   setupEventListeners() {
-    // Only add once for the page
     if (this.listenersAdded) return;
     this.listenersAdded = true;
 
@@ -85,6 +95,8 @@ class ParkerGame {
     this.player.x = 100;
     this.player.speedX = 0;
     this.player.speedY = 0;
+    this.jumpUsed = 0;
+    this.updateJumpCounter();
   }
 
   generateMorePlatforms() {
@@ -99,14 +111,12 @@ class ParkerGame {
     ];
     const maxJumpHeight = this.player.jumpPower * this.player.jumpPower / (2 * this.gravity);
     const maxJumpDistance = this.player.maxSpeed * (this.player.jumpPower / this.gravity);
-
     while (this.nextPlatformX < this.cameraX + this.canvas.width + 1000) {
       if (Math.random() < 0.8) {
         const blockData = blockTypes[Math.floor(Math.random() * blockTypes.length)];
         const platformHeight = 80 + Math.random() * Math.min(120, maxJumpHeight - 50);
         const platformWidth = 64 + Math.floor(Math.random() * 3) * 64;
         const horizontalGap = 32 + Math.random() * Math.min(80, maxJumpDistance - 40);
-
         this.platforms.push({
           x: this.nextPlatformX + horizontalGap,
           y: this.canvas.height - 32 - platformHeight,
@@ -115,7 +125,6 @@ class ParkerGame {
           color: blockData.color,
           type: blockData.type
         });
-
         if (Math.random() < 0.3) {
           this.goals.push({
             x: this.nextPlatformX + horizontalGap + 16,
@@ -127,7 +136,6 @@ class ParkerGame {
             type: 'emerald'
           });
         }
-
         this.nextPlatformX += horizontalGap + platformWidth;
       } else {
         this.nextPlatformX += 64;
@@ -141,15 +149,25 @@ class ParkerGame {
     this.worldSpeed += this.worldSpeedIncrease;
     this.generateMorePlatforms();
 
+    // Movement
     if (this.keys['ArrowLeft']) {
       this.player.speedX = Math.max(this.player.speedX - 1.2, -this.player.maxSpeed);
     }
     if (this.keys['ArrowRight']) {
       this.player.speedX = Math.min(this.player.speedX + 1.2, this.player.maxSpeed);
     }
-    if ((this.keys['ArrowUp'] || this.keys[' ']) && this.player.onGround) {
+
+    // Double Jump logic
+    if ((this.keys['ArrowUp'] || this.keys[' ']) && this.jumpUsed < this.jumpMax && !this.jumpLock) {
       this.player.speedY = -this.player.jumpPower;
       this.player.onGround = false;
+      this.jumpUsed++;
+      this.updateJumpCounter();
+      this.jumpLock = true;
+    }
+    // Prevent holding down jump to use all jumps: only allow once per key press
+    if (!(this.keys['ArrowUp'] || this.keys[' '])) {
+      this.jumpLock = false;
     }
 
     this.player.speedX *= this.friction;
@@ -157,6 +175,7 @@ class ParkerGame {
     this.player.x += this.player.speedX;
     this.player.y += this.player.speedY;
 
+    // Clamp player X
     if (this.player.x < 50) {
       this.player.x = 50;
       this.player.speedX = 0;
@@ -166,6 +185,7 @@ class ParkerGame {
       this.player.speedX = 0;
     }
 
+    // Platform collision + jump reset
     this.player.onGround = false;
     const playerWorldX = this.player.x + this.cameraX;
     for (let platform of this.platforms) {
@@ -179,14 +199,21 @@ class ParkerGame {
         height: this.player.height
       };
       if (this.checkCollision(playerRect, platform)) {
+        // Landing on top of platform
         if (this.player.speedY > 0 && this.player.y < platform.y) {
           this.player.y = platform.y - this.player.height;
           this.player.speedY = 0;
           this.player.onGround = true;
-        } else if (this.player.speedY < 0 && this.player.y + this.player.height > platform.y + platform.height) {
+          this.jumpUsed = 0; // Reset jumps when landing
+          this.updateJumpCounter();
+        }
+        // Hitting platform from below
+        else if (this.player.speedY < 0 && this.player.y + this.player.height > platform.y + platform.height) {
           this.player.y = platform.y + platform.height;
           this.player.speedY = 0;
-        } else if (this.player.speedX > 0 && playerWorldX < platform.x) {
+        }
+        // Hitting platform from side
+        else if (this.player.speedX > 0 && playerWorldX < platform.x) {
           this.player.x = platform.x - this.player.width - this.cameraX;
           this.player.speedX = 0;
         } else if (this.player.speedX < 0 && playerWorldX + this.player.width > platform.x + platform.width) {
@@ -196,6 +223,7 @@ class ParkerGame {
       }
     }
 
+    // Collect goals
     for (let goal of this.goals) {
       if (!goal.collected) {
         const playerRect = {
@@ -216,6 +244,7 @@ class ParkerGame {
     this.platforms = this.platforms.filter(p => p.x > this.cameraX - 200);
     this.goals = this.goals.filter(g => g.x > this.cameraX - 200);
 
+    // Death
     if (this.player.y + this.player.height >= this.lavaLevel ||
       this.player.y > this.canvas.height ||
       this.player.x + this.cameraX < this.cameraX - 100) {
@@ -227,6 +256,11 @@ class ParkerGame {
 
   gameOver() {
     this.gameRunning = false;
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('parkerHighScore', String(this.highScore));
+      this.updateHighScore();
+    }
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.fillStyle = 'white';
@@ -236,6 +270,11 @@ class ParkerGame {
     this.ctx.font = '24px Arial';
     this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2);
     this.ctx.fillText('Click Restart or press Enter to try again!', this.canvas.width / 2, this.canvas.height / 2 + 50);
+    if (this.score === this.highScore) {
+      this.ctx.fillStyle = '#ffd700';
+      this.ctx.font = '32px Arial';
+      this.ctx.fillText('NEW HIGH SCORE!', this.canvas.width / 2, this.canvas.height / 2 + 100);
+    }
   }
 
   checkCollision(rect1, rect2) {
@@ -275,6 +314,8 @@ class ParkerGame {
     this.ctx.font = '16px Arial';
     this.ctx.fillText(`Speed: ${Math.floor(this.worldSpeed)}`, 10, 30);
   }
+
+  // ... Drawing methods as before
 
   drawLava() {
     const time = Date.now() * 0.003;
@@ -456,6 +497,16 @@ class ParkerGame {
     this.levelElement.textContent = this.level;
   }
 
+  updateHighScore() {
+    this.highScoreElement.textContent = this.highScore;
+  }
+
+  updateJumpCounter() {
+    this.jumpUsedElement.textContent = this.jumpUsed;
+    this.jumpMaxElement.textContent = this.jumpMax;
+    this.jumpLeftElement.textContent = this.jumpMax - this.jumpUsed;
+  }
+
   nextLevel() {
     this.level++;
     this.worldSpeed += 1;
@@ -467,6 +518,8 @@ class ParkerGame {
     this.player.y = this.canvas.height - 100;
     this.player.speedX = 0;
     this.player.speedY = 0;
+    this.jumpUsed = 0;
+    this.updateJumpCounter();
   }
 
   restart() {
@@ -479,10 +532,11 @@ class ParkerGame {
     this.updateScore();
     this.updateLevel();
     this.generateLevel();
+    this.updateJumpCounter();
   }
 
   gameLoop() {
-    if (gameInstance !== this) return; // Only allow one loop to run!
+    if (gameInstance !== this) return;
     this.update();
     this.render();
     requestAnimationFrame(() => this.gameLoop());
