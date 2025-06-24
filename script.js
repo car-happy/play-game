@@ -1,3 +1,5 @@
+let gameInstance = null; // Always keep only one instance
+
 class ParkerGame {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -10,11 +12,10 @@ class ParkerGame {
     this.level = 1;
     this.gameRunning = true;
 
-    // Player character (stays in fixed position on screen)
     this.player = {
-      x: 100, // Fixed position on screen
+      x: 100,
       y: 200,
-      width: 32, // Bigger player
+      width: 32,
       height: 64,
       speedX: 0,
       speedY: 0,
@@ -24,47 +25,36 @@ class ParkerGame {
       color: '#3498db'
     };
 
-    // Physics
     this.gravity = 0.6;
     this.friction = 0.85;
-
-    // World movement (train speed)
     this.worldSpeed = 1.5;
     this.worldSpeedIncrease = 0.005;
     this.cameraX = 0;
-
-    // Platforms and goals
     this.platforms = [];
     this.goals = [];
     this.nextPlatformX = 0;
-
     this.keys = {};
 
-    this.listenersAdded = false;
-    this.init();
-  }
-
-  init() {
     this.generateLevel();
-    this.setupEventListeners();
-    this.gameLoop();
+    this.updateScore();
+    this.updateLevel();
   }
 
   setupEventListeners() {
-    // Only add listeners once
+    // Only add once for the page
     if (this.listenersAdded) return;
     this.listenersAdded = true;
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        this.restart();
+        if (gameInstance) gameInstance.restart();
       } else if (
         e.key === 'ArrowLeft' ||
         e.key === 'ArrowRight' ||
         e.key === 'ArrowUp' ||
         e.key === ' '
       ) {
-        this.keys[e.key] = true;
+        if (gameInstance) gameInstance.keys[e.key] = true;
       }
     });
 
@@ -75,12 +65,12 @@ class ParkerGame {
         e.key === 'ArrowUp' ||
         e.key === ' '
       ) {
-        this.keys[e.key] = false;
+        if (gameInstance) gameInstance.keys[e.key] = false;
       }
     });
 
     this.restartBtn.addEventListener('click', () => {
-      this.restart();
+      if (gameInstance) gameInstance.restart();
     });
   }
 
@@ -89,14 +79,8 @@ class ParkerGame {
     this.goals = [];
     this.nextPlatformX = 0;
     this.cameraX = 0;
-
-    // Generate lava floor (not a platform, just visual)
     this.lavaLevel = this.canvas.height - 32;
-
-    // Generate initial elevated platforms
     this.generateMorePlatforms();
-
-    // Reset player position (above lava)
     this.player.y = this.lavaLevel - 200;
     this.player.x = 100;
     this.player.speedX = 0;
@@ -113,7 +97,6 @@ class ParkerGame {
       { color: '#696969', type: 'stone' },
       { color: '#778899', type: 'stone' }
     ];
-
     const maxJumpHeight = this.player.jumpPower * this.player.jumpPower / (2 * this.gravity);
     const maxJumpDistance = this.player.maxSpeed * (this.player.jumpPower / this.gravity);
 
@@ -154,38 +137,26 @@ class ParkerGame {
 
   update() {
     if (!this.gameRunning) return;
-
-    // Move the world (train effect)
     this.cameraX += this.worldSpeed;
     this.worldSpeed += this.worldSpeedIncrease;
-
-    // Generate more platforms as needed
     this.generateMorePlatforms();
 
-    // Player input - only arrow keys for movement (no A/D)
     if (this.keys['ArrowLeft']) {
       this.player.speedX = Math.max(this.player.speedX - 1.2, -this.player.maxSpeed);
     }
     if (this.keys['ArrowRight']) {
       this.player.speedX = Math.min(this.player.speedX + 1.2, this.player.maxSpeed);
     }
-    // Manual jump only - player must press jump key while on ground
     if ((this.keys['ArrowUp'] || this.keys[' ']) && this.player.onGround) {
       this.player.speedY = -this.player.jumpPower;
       this.player.onGround = false;
     }
 
-    // Apply friction to horizontal movement
     this.player.speedX *= this.friction;
-
-    // Apply gravity
     this.player.speedY += this.gravity;
-
-    // Update player position (but keep X relatively fixed on screen)
     this.player.x += this.player.speedX;
     this.player.y += this.player.speedY;
 
-    // Keep player from moving too far left or right on screen
     if (this.player.x < 50) {
       this.player.x = 50;
       this.player.speedX = 0;
@@ -195,51 +166,36 @@ class ParkerGame {
       this.player.speedX = 0;
     }
 
-    // Platform collision (adjusted for world coordinates)
     this.player.onGround = false;
     const playerWorldX = this.player.x + this.cameraX;
-
     for (let platform of this.platforms) {
       if (platform.x + platform.width < this.cameraX - 100 || platform.x > this.cameraX + this.canvas.width + 100) {
         continue;
       }
-
       const playerRect = {
         x: playerWorldX,
         y: this.player.y,
         width: this.player.width,
         height: this.player.height
       };
-
       if (this.checkCollision(playerRect, platform)) {
-        // Landing on top of platform
-        if (this.player.speedY > 0 &&
-          this.player.y < platform.y) {
+        if (this.player.speedY > 0 && this.player.y < platform.y) {
           this.player.y = platform.y - this.player.height;
           this.player.speedY = 0;
           this.player.onGround = true;
-        }
-        // Hitting platform from below
-        else if (this.player.speedY < 0 &&
-          this.player.y + this.player.height > platform.y + platform.height) {
+        } else if (this.player.speedY < 0 && this.player.y + this.player.height > platform.y + platform.height) {
           this.player.y = platform.y + platform.height;
           this.player.speedY = 0;
-        }
-        // Hitting platform from side
-        else if (this.player.speedX > 0 &&
-          playerWorldX < platform.x) {
+        } else if (this.player.speedX > 0 && playerWorldX < platform.x) {
           this.player.x = platform.x - this.player.width - this.cameraX;
           this.player.speedX = 0;
-        }
-        else if (this.player.speedX < 0 &&
-          playerWorldX + this.player.width > platform.x + platform.width) {
+        } else if (this.player.speedX < 0 && playerWorldX + this.player.width > platform.x + platform.width) {
           this.player.x = platform.x + platform.width - this.cameraX;
           this.player.speedX = 0;
         }
       }
     }
 
-    // Check goal collection
     for (let goal of this.goals) {
       if (!goal.collected) {
         const playerRect = {
@@ -248,7 +204,6 @@ class ParkerGame {
           width: this.player.width,
           height: this.player.height
         };
-
         if (this.checkCollision(playerRect, goal)) {
           goal.collected = true;
           goal.color = '#f39c12';
@@ -258,18 +213,14 @@ class ParkerGame {
       }
     }
 
-    // Clean up old platforms and goals to save memory
     this.platforms = this.platforms.filter(p => p.x > this.cameraX - 200);
     this.goals = this.goals.filter(g => g.x > this.cameraX - 200);
 
-    // Death conditions: touching lava, falling off screen, or falling behind
     if (this.player.y + this.player.height >= this.lavaLevel ||
       this.player.y > this.canvas.height ||
       this.player.x + this.cameraX < this.cameraX - 100) {
       this.gameOver();
     }
-
-    // Increase score based on distance traveled
     this.score += Math.floor(this.worldSpeed);
     this.updateScore();
   }
@@ -296,28 +247,19 @@ class ParkerGame {
 
   render() {
     if (!this.gameRunning) return;
-
-    // Clear canvas with darker atmosphere
     this.ctx.fillStyle = '#2c1810';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Draw lava floor
     this.drawLava();
-
-    // Draw platforms with proper Minecraft block textures (adjusted for camera)
     for (let platform of this.platforms) {
       const screenX = platform.x - this.cameraX;
       if (screenX + platform.width >= -100 && screenX <= this.canvas.width + 100) {
         this.drawMinecraftBlock(screenX, platform.y, platform.width, platform.height, platform.color, platform.type);
       }
     }
-
-    // Draw goals as emerald blocks (adjusted for camera)
     for (let goal of this.goals) {
       const screenX = goal.x - this.cameraX;
       if (screenX + goal.width >= -50 && screenX <= this.canvas.width + 50) {
         this.drawMinecraftBlock(screenX, goal.y, goal.width, goal.height, goal.color, goal.type);
-
         if (!goal.collected) {
           const time = Date.now() * 0.01;
           this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -328,11 +270,7 @@ class ParkerGame {
         }
       }
     }
-
-    // Draw Minecraft-style player (always at fixed screen position)
     this.drawMinecraftPlayer();
-
-    // Draw speed indicator
     this.ctx.fillStyle = 'white';
     this.ctx.font = '16px Arial';
     this.ctx.fillText(`Speed: ${Math.floor(this.worldSpeed)}`, 10, 30);
@@ -365,13 +303,11 @@ class ParkerGame {
   drawMinecraftBlock(x, y, width, height, baseColor, blockType = 'stone') {
     this.ctx.fillStyle = baseColor;
     this.ctx.fillRect(x, y, width, height);
-
     const blockSize = 16;
     for (let bx = x; bx < x + width; bx += blockSize) {
       for (let by = y; by < y + height; by += blockSize) {
         const blockWidth = Math.min(blockSize, x + width - bx);
         const blockHeight = Math.min(blockSize, y + height - by);
-
         if (blockType === 'grass') {
           this.drawGrassBlock(bx, by, blockWidth, blockHeight);
         } else if (blockType === 'stone') {
@@ -407,10 +343,8 @@ class ParkerGame {
   drawStoneBlock(x, y, width, height, baseColor) {
     this.ctx.fillStyle = baseColor;
     this.ctx.fillRect(x, y, width, height);
-
     const darkerColor = this.darkenColor(baseColor, 20);
     const lighterColor = this.lightenColor(baseColor, 15);
-
     this.ctx.fillStyle = darkerColor;
     this.ctx.fillRect(x + 2, y + 2, 3, 2);
     this.ctx.fillRect(x + 7, y + 1, 2, 3);
@@ -418,13 +352,11 @@ class ParkerGame {
     this.ctx.fillRect(x + 4, y + 8, 3, 2);
     this.ctx.fillRect(x + 10, y + 10, 2, 2);
     this.ctx.fillRect(x + 1, y + 12, 2, 2);
-
     this.ctx.fillStyle = lighterColor;
     this.ctx.fillRect(x + 6, y + 3, 2, 1);
     this.ctx.fillRect(x + 11, y + 7, 1, 2);
     this.ctx.fillRect(x + 3, y + 11, 1, 1);
     this.ctx.fillRect(x + 13, y + 12, 1, 1);
-
     this.ctx.strokeStyle = darkerColor;
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(x, y, width, height);
@@ -433,7 +365,6 @@ class ParkerGame {
   drawWoodBlock(x, y, width, height, baseColor) {
     this.ctx.fillStyle = baseColor;
     this.ctx.fillRect(x, y, width, height);
-
     const darkerColor = this.darkenColor(baseColor, 15);
     this.ctx.fillStyle = darkerColor;
     for (let i = 0; i < width; i += 4) {
@@ -443,11 +374,9 @@ class ParkerGame {
     this.ctx.fillRect(x, y + 3, width, 1);
     this.ctx.fillRect(x, y + 8, width, 1);
     this.ctx.fillRect(x, y + 13, width, 1);
-
     this.ctx.fillStyle = this.darkenColor(baseColor, 40);
     this.ctx.fillRect(x + 6, y + 5, 3, 2);
     this.ctx.fillRect(x + 11, y + 10, 2, 2);
-
     this.ctx.strokeStyle = darkerColor;
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(x, y, width, height);
@@ -456,21 +385,18 @@ class ParkerGame {
   drawEmeraldBlock(x, y, width, height) {
     this.ctx.fillStyle = '#27ae60';
     this.ctx.fillRect(x, y, width, height);
-
     this.ctx.fillStyle = '#2ecc71';
     this.ctx.fillRect(x + 2, y + 2, 4, 4);
     this.ctx.fillRect(x + 10, y + 2, 4, 4);
     this.ctx.fillRect(x + 6, y + 8, 4, 4);
     this.ctx.fillRect(x + 2, y + 10, 4, 4);
     this.ctx.fillRect(x + 10, y + 10, 4, 4);
-
     this.ctx.fillStyle = '#a7ffeb';
     this.ctx.fillRect(x + 3, y + 3, 1, 1);
     this.ctx.fillRect(x + 11, y + 3, 1, 1);
     this.ctx.fillRect(x + 7, y + 9, 1, 1);
     this.ctx.fillRect(x + 3, y + 11, 1, 1);
     this.ctx.fillRect(x + 11, y + 11, 1, 1);
-
     this.ctx.strokeStyle = '#1e8449';
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(x, y, width, height);
@@ -479,40 +405,25 @@ class ParkerGame {
   drawMinecraftPlayer() {
     const px = this.player.x;
     const py = this.player.y;
-
-    // Player body (blue shirt)
     this.ctx.fillStyle = '#4a90e2';
     this.ctx.fillRect(px, py + 16, 32, 32);
-
-    // Player head (skin color)
     this.ctx.fillStyle = '#fdbcb4';
     this.ctx.fillRect(px, py, 32, 16);
-
-    // Player legs (blue pants)
     this.ctx.fillStyle = '#2c5282';
     this.ctx.fillRect(px, py + 48, 16, 16);
     this.ctx.fillRect(px + 16, py + 48, 16, 16);
-
-    // Hair (brown)
     this.ctx.fillStyle = '#8b4513';
     this.ctx.fillRect(px + 4, py, 24, 6);
-
-    // Eyes
     this.ctx.fillStyle = 'black';
     this.ctx.fillRect(px + 6, py + 4, 4, 4);
     this.ctx.fillRect(px + 22, py + 4, 4, 4);
-
-    // Mouth
-    this.ctx.fillStyle = 'black';
     this.ctx.fillRect(px + 12, py + 10, 8, 2);
-
-    // Add pixelated border for authentic Minecraft look
     this.ctx.strokeStyle = 'black';
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(px, py, 32, 16); // Head
-    this.ctx.strokeRect(px, py + 16, 32, 32); // Body
-    this.ctx.strokeRect(px, py + 48, 16, 16); // Left leg
-    this.ctx.strokeRect(px + 16, py + 48, 16, 16); // Right leg
+    this.ctx.strokeRect(px, py, 32, 16);
+    this.ctx.strokeRect(px, py + 16, 32, 32);
+    this.ctx.strokeRect(px, py + 48, 16, 16);
+    this.ctx.strokeRect(px + 16, py + 48, 16, 16);
   }
 
   darkenColor(color, percent) {
@@ -559,7 +470,7 @@ class ParkerGame {
   }
 
   restart() {
-    this.keys = {}; // Reset keys on restart!
+    this.keys = {};
     this.score = 0;
     this.level = 1;
     this.gameRunning = true;
@@ -571,13 +482,16 @@ class ParkerGame {
   }
 
   gameLoop() {
+    if (gameInstance !== this) return; // Only allow one loop to run!
     this.update();
     this.render();
     requestAnimationFrame(() => this.gameLoop());
   }
 }
 
-// Start the game when the page loads
+// Start the game ONCE, and keep the instance alive globally
 window.addEventListener('load', () => {
-  new ParkerGame();
+  gameInstance = new ParkerGame();
+  gameInstance.setupEventListeners();
+  gameInstance.gameLoop();
 });
