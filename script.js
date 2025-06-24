@@ -14,7 +14,7 @@ class ParkerGame {
     this.player = {
       x: 100, // Fixed position on screen
       y: 200,
-      width: 32,
+      width: 32, // Bigger player
       height: 64,
       speedX: 0,
       speedY: 0,
@@ -40,6 +40,7 @@ class ParkerGame {
 
     this.keys = {};
 
+    this.listenersAdded = false;
     this.init();
   }
 
@@ -50,7 +51,10 @@ class ParkerGame {
   }
 
   setupEventListeners() {
-    // Keyboard controls
+    // Only add listeners once
+    if (this.listenersAdded) return;
+    this.listenersAdded = true;
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         this.restart();
@@ -60,23 +64,21 @@ class ParkerGame {
         e.key === 'ArrowUp' ||
         e.key === ' '
       ) {
-        this.keys[e.key.toLowerCase()] = true;
+        this.keys[e.key] = true;
       }
     });
 
     document.addEventListener('keyup', (e) => {
-      // Only allow arrow keys and space to affect keys object
       if (
         e.key === 'ArrowLeft' ||
         e.key === 'ArrowRight' ||
         e.key === 'ArrowUp' ||
         e.key === ' '
       ) {
-        this.keys[e.key.toLowerCase()] = false;
+        this.keys[e.key] = false;
       }
     });
 
-    // Restart button
     this.restartBtn.addEventListener('click', () => {
       this.restart();
     });
@@ -96,6 +98,7 @@ class ParkerGame {
 
     // Reset player position (above lava)
     this.player.y = this.lavaLevel - 200;
+    this.player.x = 100;
     this.player.speedX = 0;
     this.player.speedY = 0;
   }
@@ -159,15 +162,15 @@ class ParkerGame {
     // Generate more platforms as needed
     this.generateMorePlatforms();
 
-    // Player input - only arrow keys for movement
-    if (this.keys['arrowleft']) {
+    // Player input - only arrow keys for movement (no A/D)
+    if (this.keys['ArrowLeft']) {
       this.player.speedX = Math.max(this.player.speedX - 1.2, -this.player.maxSpeed);
     }
-    if (this.keys['arrowright']) {
+    if (this.keys['ArrowRight']) {
       this.player.speedX = Math.min(this.player.speedX + 1.2, this.player.maxSpeed);
     }
     // Manual jump only - player must press jump key while on ground
-    if ((this.keys['arrowup'] || this.keys[' ']) && this.player.onGround) {
+    if ((this.keys['ArrowUp'] || this.keys[' ']) && this.player.onGround) {
       this.player.speedY = -this.player.jumpPower;
       this.player.onGround = false;
     }
@@ -192,7 +195,7 @@ class ParkerGame {
       this.player.speedX = 0;
     }
 
-    // Platform collision
+    // Platform collision (adjusted for world coordinates)
     this.player.onGround = false;
     const playerWorldX = this.player.x + this.cameraX;
 
@@ -556,6 +559,7 @@ class ParkerGame {
   }
 
   restart() {
+    this.keys = {}; // Reset keys on restart!
     this.score = 0;
     this.level = 1;
     this.gameRunning = true;
