@@ -3,7 +3,9 @@ let gameInstance = null;
 function resizeCanvas(canvas) {
   const ratio = 4/3;
   let width = window.innerWidth - 40;
-  let height = window.innerHeight - 260;
+  // Detect mobile device for smarter height calculation
+  let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  let height = window.innerHeight - (isMobile ? 120 : 260);
   if (width / height > ratio) {
     width = height * ratio;
   } else {
@@ -69,6 +71,10 @@ class ParkerGame {
     this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     this.gameOverBannerAnimating = false;
 
+    // Lava and platform margin: keep play area visible on mobile
+    this.lavaMargin = 80; // margin above the bottom, can tune for more space
+    this.lavaLevel = this.canvas.height - this.lavaMargin;
+
     this.generateLevel();
     this.updateScore();
     this.updateLevel();
@@ -78,8 +84,7 @@ class ParkerGame {
     resizeCanvas(this.canvas);
     window.addEventListener('resize', () => {
       resizeCanvas(this.canvas);
-      this.lavaLevel = this.canvas.height - 32;
-      // Also update game over banner Y target for responsive
+      this.lavaLevel = this.canvas.height - this.lavaMargin;
       this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     });
   }
@@ -190,7 +195,7 @@ class ParkerGame {
     this.goals = [];
     this.nextPlatformX = 0;
     this.cameraX = 0;
-    this.lavaLevel = this.canvas.height - 32;
+    this.lavaLevel = this.canvas.height - this.lavaMargin;
     this.generateMorePlatforms();
     this.player.y = this.lavaLevel - 200;
     this.player.x = 100;
@@ -215,12 +220,13 @@ class ParkerGame {
     while (this.nextPlatformX < this.cameraX + this.canvas.width + 1000) {
       if (Math.random() < 0.8) {
         const blockData = blockTypes[Math.floor(Math.random() * blockTypes.length)];
+        // Place platforms higher above the lava (lower on screen)
         const platformHeight = 80 + Math.random() * Math.min(120, maxJumpHeight - 50);
         const platformWidth = 64 + Math.floor(Math.random() * 3) * 64;
         const horizontalGap = 32 + Math.random() * Math.min(80, maxJumpDistance - 40);
         this.platforms.push({
           x: this.nextPlatformX + horizontalGap,
-          y: this.canvas.height - 32 - platformHeight,
+          y: this.lavaLevel - platformHeight,
           width: platformWidth,
           height: 32,
           color: blockData.color,
@@ -229,7 +235,7 @@ class ParkerGame {
         if (Math.random() < 0.3) {
           this.goals.push({
             x: this.nextPlatformX + horizontalGap + 16,
-            y: this.canvas.height - 32 - platformHeight - 32,
+            y: this.lavaLevel - platformHeight - 32,
             width: 32,
             height: 32,
             collected: false,
