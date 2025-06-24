@@ -64,6 +64,11 @@ class ParkerGame {
     this.nextPlatformX = 0;
     this.keys = {};
 
+    // Game Over Banner Animation State
+    this.gameOverBannerY = -100;
+    this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
+    this.gameOverBannerAnimating = false;
+
     this.generateLevel();
     this.updateScore();
     this.updateLevel();
@@ -74,6 +79,8 @@ class ParkerGame {
     window.addEventListener('resize', () => {
       resizeCanvas(this.canvas);
       this.lavaLevel = this.canvas.height - 32;
+      // Also update game over banner Y target for responsive
+      this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
     });
   }
 
@@ -355,20 +362,10 @@ class ParkerGame {
       localStorage.setItem('parkerHighScore', String(this.highScore));
       this.updateHighScore();
     }
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '48px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('GAME OVER!', this.canvas.width / 2, this.canvas.height / 2 - 50);
-    this.ctx.font = '24px Arial';
-    this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2);
-    this.ctx.fillText('Click Restart or press Enter to try again!', this.canvas.width / 2, this.canvas.height / 2 + 50);
-    if (this.score === this.highScore) {
-      this.ctx.fillStyle = '#ffd700';
-      this.ctx.font = '32px Arial';
-      this.ctx.fillText('NEW HIGH SCORE!', this.canvas.width / 2, this.canvas.height / 2 + 100);
-    }
+    // Start banner animation
+    this.gameOverBannerY = -100;
+    this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
+    this.gameOverBannerAnimating = true;
   }
 
   checkCollision(rect1, rect2) {
@@ -416,6 +413,56 @@ class ParkerGame {
     this.ctx.fillStyle = 'white';
     this.ctx.font = '16px Arial';
     this.ctx.fillText(`Speed: ${Math.floor(this.worldSpeed)}`, 10, 30);
+
+    // Game Over Banner Animation
+    if (!this.gameRunning && this.gameOverBannerAnimating) {
+      // Fade background
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.4;
+      this.ctx.fillStyle = "#000";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.restore();
+
+      // Animate banner falling
+      if (this.gameOverBannerY < this.gameOverBannerTargetY) {
+        this.gameOverBannerY += 20;
+        if (this.gameOverBannerY > this.gameOverBannerTargetY) {
+          this.gameOverBannerY = this.gameOverBannerTargetY;
+        }
+      }
+      // Draw banner
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.96;
+      this.ctx.fillStyle = "#222";
+      this.ctx.fillRect(
+        this.canvas.width / 2 - 220,
+        this.gameOverBannerY,
+        440,
+        120
+      );
+      this.ctx.globalAlpha = 1;
+      this.ctx.strokeStyle = "#fff";
+      this.ctx.lineWidth = 4;
+      this.ctx.strokeRect(
+        this.canvas.width / 2 - 220,
+        this.gameOverBannerY,
+        440,
+        120
+      );
+      this.ctx.fillStyle = "#ffd700";
+      this.ctx.font = "bold 48px Arial";
+      this.ctx.textAlign = "center";
+      this.ctx.fillText("GAME OVER!", this.canvas.width / 2, this.gameOverBannerY + 55);
+      this.ctx.fillStyle = "white";
+      this.ctx.font = "24px Arial";
+      this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.gameOverBannerY + 85);
+      if (this.score === this.highScore) {
+        this.ctx.fillStyle = "#ff0";
+        this.ctx.font = "20px Arial";
+        this.ctx.fillText("NEW HIGH SCORE!", this.canvas.width / 2, this.gameOverBannerY + 110);
+      }
+      this.ctx.restore();
+    }
   }
 
   drawLava() {
@@ -634,6 +681,10 @@ class ParkerGame {
     this.updateLevel();
     this.generateLevel();
     this.updateJumpCounter();
+    // Reset game over banner state
+    this.gameOverBannerY = -100;
+    this.gameOverBannerTargetY = this.canvas.height / 2 - 80;
+    this.gameOverBannerAnimating = false;
   }
 
   gameLoop() {
